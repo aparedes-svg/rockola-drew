@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rockola · Pantalla</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bungee&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#17102b; --panel:#221a3d; --line:#3a2f5e; --ink:#f4eefc; --mute:#a99dc9;
+  --pink:#ff3d9a; --amber:#ffb627; --teal:#34e5d3;
+}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:Outfit,system-ui,sans-serif;display:flex;flex-direction:column;min-height:100vh}
+header{display:flex;align-items:center;justify-content:space-between;padding:18px 28px}
+.wordmark{font-family:Bungee,Outfit,sans-serif;font-size:clamp(28px,3.4vw,48px);color:var(--pink);
+  text-shadow:0 0 6px var(--pink),0 0 22px rgba(255,61,154,.55);animation:flicker 1.6s ease-out 1}
+.sign{font-family:Bungee,Outfit,sans-serif;font-size:18px;color:var(--amber);text-shadow:0 0 10px rgba(255,182,39,.5)}
+@keyframes flicker{0%,18%,22%,60%{opacity:.25}20%,24%,64%,100%{opacity:1}}
+main{flex:1;display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:24px;padding:0 28px 20px}
+.stage{position:relative;aspect-ratio:16/9;background:#000;border:3px solid var(--pink);border-radius:22px;
+  box-shadow:0 0 0 1px rgba(255,61,154,.35),0 0 32px rgba(255,61,154,.35),inset 0 0 24px rgba(255,61,154,.18);overflow:hidden}
+.stage iframe,.stage #yt{position:absolute;inset:0;width:100%;height:100%}
+.overlay{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;
+  text-align:center;padding:28px;background:rgba(23,16,43,.94);z-index:5}
+.overlay.on{display:flex}
+.overlay h2{font-size:clamp(22px,2.6vw,36px);font-weight:800}
+.overlay p{color:var(--mute);max-width:46ch;line-height:1.5;font-size:clamp(15px,1.4vw,19px)}
+button{font:inherit;cursor:pointer;border:0;border-radius:999px;padding:12px 26px;font-weight:600;background:var(--pink);color:#fff}
+button.ghost{background:transparent;border:1.5px solid var(--line);color:var(--ink)}
+button:focus-visible{outline:3px solid var(--teal);outline-offset:3px}
+button:hover{filter:brightness(1.1)}
+.now{margin-top:18px}
+.now small{color:var(--mute);font-size:15px}
+.now h1{font-size:clamp(22px,2.4vw,34px);font-weight:800;line-height:1.2;margin-top:4px;overflow-wrap:anywhere}
+.side{display:flex;flex-direction:column;gap:18px;min-width:0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px}
+.card h3{font-size:17px;font-weight:600;color:var(--amber);margin-bottom:10px}
+ol{list-style:none;padding:0;display:flex;flex-direction:column;gap:8px;max-height:42vh;overflow:auto}
+li{display:flex;gap:10px;align-items:baseline;line-height:1.3}
+li .n{color:var(--teal);font-weight:800;min-width:1.6em}
+li .t{overflow-wrap:anywhere}
+li .by{color:var(--mute);font-size:13px}
+.empty{color:var(--mute);line-height:1.5}
+.qr{display:flex;gap:16px;align-items:center}
+#qr{background:#fff;padding:8px;border-radius:10px;line-height:0}
+.qr p{color:var(--mute);font-size:14px;line-height:1.4}
+.qr b{color:var(--ink);display:block;font-size:16px;margin-bottom:4px}
+footer{display:flex;gap:14px;align-items:center;flex-wrap:wrap;padding:0 28px 18px;color:var(--mute);font-size:13px}
+footer code{background:var(--panel);padding:3px 8px;border-radius:6px;color:var(--ink)}
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:var(--panel);border:1px solid var(--amber);
+  padding:12px 20px;border-radius:12px;display:none;z-index:20;max-width:90vw}
+.toast.on{display:block}
+@media (max-width:900px){main{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){.wordmark{animation:none}}
+</style>
+</head>
+<body>
+<header>
+  <div class="wordmark">ROCKOLA</div>
+  <div class="sign">by DREW</div>
+</header>
+
+<main>
+  <section>
+    <div class="stage">
+      <div id="yt"></div>
+
+      <div class="overlay on" id="ovStart">
+        <h2>Todo listo para sonar</h2>
+        <p>El navegador pide un clic para permitir el audio. Pulsa el botón y la rockola arranca sola.</p>
+        <button id="btnStart">Iniciar rockola</button>
+      </div>
+
+      <div class="overlay" id="ovIdle">
+        <h2>La cola está vacía</h2>
+        <p>Escanea el código QR con tu celular y pega un enlace de YouTube. La primera canción suena al instante.</p>
+      </div>
+
+      <div class="overlay" id="ovAdmin">
+        <h2>Falta autorizar este reproductor</h2>
+        <p>En Firebase, abre Realtime Database → Datos y crea el nodo <b>admin</b> con un hijo <b>uid</b> cuyo valor sea este código. Luego recarga esta página.</p>
+        <code id="uidBig" style="background:#17102b;padding:10px 14px;border-radius:10px;font-size:15px;overflow-wrap:anywhere"></code>
+        <button class="ghost" onclick="location.reload()">Ya lo hice, recargar</button>
+      </div>
+    </div>
+
+    <div class="now">
+      <small>Sonando ahora</small>
+      <h1 id="nowTitle">Nada por ahora</h1>
+    </div>
+  </section>
+
+  <aside class="side">
+    <div class="card">
+      <h3>Siguientes</h3>
+      <ol id="next"></ol>
+      <p class="empty" id="nextEmpty">Aún no hay canciones en espera.</p>
+    </div>
+    <div class="card qr">
+      <div id="qr"></div>
+      <p><b>Pide tu canción</b>Escanea el código o entra a<br><span id="guestUrl"></span></p>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button class="ghost" id="btnSkip">Saltar canción</button>
+    </div>
+  </aside>
+</main>
+
+<footer>
+  <span>ID de este reproductor:</span><code id="uid">conectando…</code>
+</footer>
+
+<div class="toast" id="toast" role="status"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+import { getDatabase, ref, onValue, update, remove } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js";
+
+/* ---------- Ajustes ---------- */
+const MAX_SECONDS = 10 * 60;   // duración máxima por canción (10 min)
+const firebaseConfig = {
+  apiKey: "AIzaSyBvHgvlmRgg-Ag2RisJveVAvk3WCfZlmAc",
+  authDomain: "rockola-drew.firebaseapp.com",
+  databaseURL: "https://rockola-drew-default-rtdb.firebaseio.com",
+  projectId: "rockola-drew",
+  storageBucket: "rockola-drew.firebasestorage.app",
+  messagingSenderId: "207525604927",
+  appId: "1:207525604927:web:b718523c79ff6f326d128a"
+};
+
+/* ---------- Utilidades ---------- */
+const $ = id => document.getElementById(id);
+let toastTimer;
+function toast(msg){
+  const t = $("toast"); t.textContent = msg; t.classList.add("on");
+  clearTimeout(toastTimer); toastTimer = setTimeout(()=>t.classList.remove("on"), 4500);
+}
+
+/* ---------- QR hacia la página de invitados ---------- */
+const guestUrl = new URL("index.html", location.href).href;
+$("guestUrl").textContent = guestUrl.replace(/^https?:\/\//, "");
+new QRCode($("qr"), { text: guestUrl, width: 150, height: 150, colorDark: "#17102b", colorLight: "#ffffff" });
+
+/* ---------- Firebase ---------- */
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getDatabase(app);
+
+let items = [];          // cola ordenada
+let playingKey = null;   // clave de la canción en reproducción
+let started = false;     // el usuario ya pulsó "Iniciar rockola"
+let ytReady = false;
+let yt = null;
+
+function showAdminHelp(){
+  $("uidBig").textContent = auth.currentUser ? auth.currentUser.uid : "(sin ID)";
+  $("ovAdmin").classList.add("on");
+  $("ovIdle").classList.remove("on");
+}
+
+function renderQueue(){
+  const waiting = items.filter(i => i.key !== playingKey);
+  const ol = $("next"); ol.textContent = "";
+  waiting.forEach((it, idx) => {
+    const li = document.createElement("li");
+    const n = document.createElement("span"); n.className = "n"; n.textContent = idx + 1;
+    const t = document.createElement("span"); t.className = "t"; t.textContent = it.titulo;
+    li.append(n, t);
+    if (it.por){ const b = document.createElement("span"); b.className = "by"; b.textContent = "· " + it.por; li.append(b); }
+    ol.append(li);
+  });
+  $("nextEmpty").style.display = waiting.length ? "none" : "block";
+}
+
+function maybeStart(){
+  if (!started || !ytReady || playingKey) return;
+  const next = items.find(i => i.estado === "reproduciendo") || items.find(i => i.estado === "pendiente");
+  if (!next){
+    $("ovIdle").classList.add("on");
+    $("nowTitle").textContent = "Nada por ahora";
+    return;
+  }
+  $("ovIdle").classList.remove("on");
+  playingKey = next.key;
+  $("nowTitle").textContent = next.titulo;
+  update(ref(db, "queue/" + next.key), { estado: "reproduciendo" })
+    .then(() => { yt.loadVideoById(next.vid); renderQueue(); })
+    .catch(() => { playingKey = null; showAdminHelp(); });
+}
+
+function finish(motivo){
+  if (!playingKey) return;
+  const k = playingKey;
+  if (motivo) toast(motivo);
+  remove(ref(db, "queue/" + k)).catch(showAdminHelp);
+  playingKey = null;
+  renderQueue();
+  maybeStart();
+}
+
+onAuthStateChanged(auth, user => {
+  if (!user) return;
+  $("uid").textContent = user.uid;
+  onValue(ref(db, "queue"), snap => {
+    const arr = [];
+    snap.forEach(c => arr.push({ key: c.key, ...c.val() }));
+    arr.sort((a, b) => (a.ts || 0) - (b.ts || 0));
+    items = arr;
+    renderQueue();
+    maybeStart();
+  });
+});
+signInAnonymously(auth).catch(() => toast("No se pudo conectar con Firebase. Revisa tu internet."));
+
+/* ---------- YouTube IFrame API ---------- */
+window.onYouTubeIframeAPIReady = () => {
+  yt = new YT.Player("yt", {
+    width: "100%", height: "100%",
+    playerVars: { autoplay: 1, rel: 0, playsinline: 1, modestbranding: 1 },
+    events: {
+      onReady: () => { ytReady = true; maybeStart(); },
+      onStateChange: e => {
+        if (e.data === YT.PlayerState.ENDED) finish();
+        if (e.data === YT.PlayerState.PLAYING && yt.getDuration() > MAX_SECONDS){
+          finish("Se saltó una canción por superar los " + (MAX_SECONDS / 60) + " minutos.");
+        }
+      },
+      onError: () => finish("Ese video no permite reproducirse aquí. Se pasó a la siguiente.")
+    }
+  });
+};
+const s = document.createElement("script");
+s.src = "https://www.youtube.com/iframe_api";
+document.head.append(s);
+
+/* ---------- Controles ---------- */
+$("btnStart").addEventListener("click", () => {
+  started = true;
+  $("ovStart").classList.remove("on");
+  maybeStart();
+});
+$("btnSkip").addEventListener("click", () => finish("Canción saltada."));
+document.addEventListener("keydown", e => { if (e.key === "n" || e.key === "N") finish("Canción saltada."); });
+</script>
+</body>
+</html>
