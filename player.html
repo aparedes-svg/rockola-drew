@@ -51,6 +51,8 @@ li .by{color:var(--mute);font-size:13px}
 .qr b{color:var(--ink);display:block;font-size:16px;margin-bottom:4px}
 footer{display:flex;gap:14px;align-items:center;flex-wrap:wrap;padding:0 28px 18px;color:var(--mute);font-size:13px}
 footer code{background:var(--panel);padding:3px 8px;border-radius:6px;color:var(--ink)}
+input{font:inherit;background:#17102b;color:var(--ink);border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;text-align:center;width:220px}
+input:focus-visible{outline:3px solid var(--teal);outline-offset:2px}
 .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:var(--panel);border:1px solid var(--amber);
   padding:12px 20px;border-radius:12px;display:none;z-index:20;max-width:90vw}
 .toast.on{display:block}
@@ -81,10 +83,11 @@ footer code{background:var(--panel);padding:3px 8px;border-radius:6px;color:var(
       </div>
 
       <div class="overlay" id="ovAdmin">
-        <h2>Falta autorizar este reproductor</h2>
-        <p>En Firebase, abre Realtime Database → Datos y crea el nodo <b>admin</b> con un hijo <b>uid</b> cuyo valor sea este código. Luego recarga esta página.</p>
-        <code id="uidBig" style="background:#17102b;padding:10px 14px;border-radius:10px;font-size:15px;overflow-wrap:anywhere"></code>
-        <button class="ghost" onclick="location.reload()">Ya lo hice, recargar</button>
+        <h2>Este equipo necesita autorización</h2>
+        <p>Escribe el PIN de administrador una sola vez. Queda guardado para este navegador.</p>
+        <input id="pin" type="password" placeholder="PIN" autocomplete="off" maxlength="40">
+        <button id="btnPin">Autorizar este equipo</button>
+        <p id="pinMsg" style="min-height:1.3em;color:var(--amber)"></p>
       </div>
     </div>
 
@@ -120,7 +123,7 @@ footer code{background:var(--panel);padding:3px 8px;border-radius:6px;color:var(
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
-import { getDatabase, ref, onValue, update, remove } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js";
+import { getDatabase, ref, onValue, update, remove, set } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js";
 
 /* ---------- Ajustes ---------- */
 const MAX_SECONDS = 10 * 60;   // duración máxima por canción (10 min)
@@ -157,15 +160,17 @@ let playingKey = null;   // clave de la canción en reproducción
 let started = false;     // el usuario ya pulsó "Iniciar rockola"
 let ytReady = false;
 let yt = null;
+const done = new Set();  // canciones ya terminadas (evita reutilizar datos viejos)
+let pinTried = false;
 
-function showAdminHelp(){
-  $("uidBig").textContent = auth.currentUser ? auth.currentUser.uid : "(sin ID)";
+function showAdminHelp(msg){
+  $("pinMsg").textContent = msg || "";
   $("ovAdmin").classList.add("on");
   $("ovIdle").classList.remove("on");
 }
 
 function renderQueue(){
-  const waiting = items.filter(i => i.key !== playingKey);
+  const waiting = items.filter(i => i.key !== playingKey && !done.has(i.key));
   const ol = $("next"); ol.textContent = "";
   waiting.forEach((it, idx) => {
     const li = document.createElement("li");
@@ -180,10 +185,13 @@ function renderQueue(){
 
 function maybeStart(){
   if (!started || !ytReady || playingKey) return;
-  const next = items.find(i => i.estado === "reproduciendo") || items.find(i => i.estado === "pendiente");
+  if ($("ovAdmin").classList.contains("on")) return;
+  const cand = items.filter(i => !done.has(i.key));
+  const next = cand.find(i => i.estado === "reproduciendo") || cand.find(i => i.estado === "pendiente");
   if (!next){
     $("ovIdle").classList.add("on");
     $("nowTitle").textContent = "Nada por ahora";
+    renderQueue();
     return;
   }
   $("ovIdle").classList.remove("on");
@@ -191,18 +199,29 @@ function maybeStart(){
   $("nowTitle").textContent = next.titulo;
   update(ref(db, "queue/" + next.key), { estado: "reproduciendo" })
     .then(() => { yt.loadVideoById(next.vid); renderQueue(); })
-    .catch(() => { playingKey = null; showAdminHelp(); });
+    .catch(() => {
+      playingKey = null;
+      showAdminHelp(pinTried ? "PIN incorrecto o aún no configurado en Firebase." : "");
+    });
 }
 
 function finish(motivo){
   if (!playingKey) return;
   const k = playingKey;
-  if (motivo) toast(motivo);
-  remove(ref(db, "queue/" + k)).catch(showAdminHelp);
+  done.add(k);
   playingKey = null;
+  if (motivo) toast(motivo);
+  remove(ref(db, "queue/" + k)).catch(() => showAdminHelp(""));
   renderQueue();
   maybeStart();
 }
+
+/* Vigilante: si se perdió un evento, la rockola se recupera sola */
+setInterval(() => {
+  if (!started || !ytReady) return;
+  if (playingKey && yt.getPlayerState && yt.getPlayerState() === 0) return finish();
+  maybeStart();
+}, 3000);
 
 onAuthStateChanged(auth, user => {
   if (!user) return;
@@ -243,6 +262,20 @@ document.head.append(s);
 $("btnStart").addEventListener("click", () => {
   started = true;
   $("ovStart").classList.remove("on");
+  maybeStart();
+});
+$("btnPin").addEventListener("click", async () => {
+  const pin = $("pin").value.trim();
+  if (!pin || !auth.currentUser) return;
+  pinTried = true;
+  try {
+    await set(ref(db, "players/" + auth.currentUser.uid + "/pin"), pin);
+  } catch {
+    $("pinMsg").textContent = "No se pudo guardar. Revisa tu conexión.";
+    return;
+  }
+  $("pin").value = "";
+  $("ovAdmin").classList.remove("on");
   maybeStart();
 });
 $("btnSkip").addEventListener("click", () => finish("Canción saltada."));
