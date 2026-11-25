@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Rockola · Pantalla</title>
+<title>Radio Vida · Pantalla</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
@@ -66,7 +66,7 @@ input:focus-visible{outline:3px solid var(--teal);outline-offset:2px}
 </head>
 <body>
 <header>
-  <div class="wordmark">ROCKOLA</div>
+  <div class="wordmark">RADIO VIDA</div>
   <div class="sign">by DREW</div>
 </header>
 
@@ -77,8 +77,8 @@ input:focus-visible{outline:3px solid var(--teal);outline-offset:2px}
 
       <div class="overlay on" id="ovStart">
         <h2>Todo listo para sonar</h2>
-        <p>El navegador pide un clic para permitir el audio. Pulsa el botón y la rockola arranca sola.</p>
-        <button id="btnStart">Iniciar rockola</button>
+        <p>El navegador pide un clic para permitir el audio. Pulsa el botón y Radio Vida arranca sola.</p>
+        <button id="btnStart">Iniciar Radio Vida</button>
       </div>
 
       <div class="overlay" id="ovIdle">
@@ -166,7 +166,7 @@ const db = getDatabase(app);
 
 let items = [];          // cola ordenada
 let playingKey = null;   // clave de la canción en reproducción
-let started = false;     // el usuario ya pulsó "Iniciar rockola"
+let started = false;     // el usuario ya pulsó "Iniciar Radio Vida"
 let ytReady = false;
 let yt = null;
 const done = new Set();  // canciones ya terminadas (evita reutilizar datos viejos)
@@ -231,7 +231,7 @@ function finish(motivo){
   maybeStart();
 }
 
-/* Vigilante: si se perdió un evento, la rockola se recupera sola */
+/* Vigilante: si se perdió un evento, la radio se recupera sola */
 setInterval(() => {
   if (!started || !ytReady) return;
   if (playingKey && yt.getPlayerState && yt.getPlayerState() === 0) return finish();
@@ -246,7 +246,7 @@ onAuthStateChanged(auth, user => {
 
 function applySnap(snap){
   const arr = [];
-  snap.forEach(c => arr.push({ key: c.key, ...c.val() }));
+  snap.forEach(c => { arr.push({ key: c.key, ...c.val() }); });
   arr.sort((a, b) => (a.ts || 0) - (b.ts || 0));
   items = arr;
   renderQueue();
