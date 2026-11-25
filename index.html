@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Rockola · Pide tu canción</title>
+<title>Radio Vida · Pide tu canción</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
@@ -16,7 +16,7 @@
 body{background:var(--bg);color:var(--ink);font-family:Outfit,system-ui,sans-serif;min-height:100vh;
   padding:max(20px,env(safe-area-inset-top)) 18px max(24px,env(safe-area-inset-bottom));max-width:560px;margin:0 auto}
 header{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:22px}
-.wordmark{font-family:Bungee,Outfit,sans-serif;font-size:34px;color:var(--pink);text-shadow:0 0 6px var(--pink),0 0 20px rgba(255,61,154,.5)}
+.wordmark{font-family:Bungee,Outfit,sans-serif;font-size:clamp(24px,8vw,34px);color:var(--pink);text-shadow:0 0 6px var(--pink),0 0 20px rgba(255,61,154,.5)}
 .sign{font-family:Bungee,Outfit,sans-serif;font-size:14px;color:var(--amber)}
 h2{font-size:22px;font-weight:800;margin-bottom:12px}
 form{display:flex;flex-direction:column;gap:12px}
@@ -43,7 +43,7 @@ li.now{border-color:var(--pink);box-shadow:0 0 14px rgba(255,61,154,.3)}
 </head>
 <body>
 <header>
-  <div class="wordmark">ROCKOLA</div>
+  <div class="wordmark">RADIO VIDA</div>
   <div class="sign">by DREW</div>
 </header>
 
@@ -146,7 +146,7 @@ onAuthStateChanged(auth, user => {
   $("btn").disabled = false; $("btn").textContent = "Agregar a la cola";
   onValue(ref(db, "queue"), snap => {
     const arr = [];
-    snap.forEach(c => arr.push({ key: c.key, ...c.val() }));
+    snap.forEach(c => { arr.push({ key: c.key, ...c.val() }); });
     arr.sort((a, b) => (a.ts || 0) - (b.ts || 0));
     items = arr; render();
   });
@@ -167,7 +167,7 @@ $("f").addEventListener("submit", async e => {
   const info = await lookup(id);
   if (!info.ok){
     btn.disabled = false; btn.textContent = "Agregar a la cola";
-    return say("Ese video no se puede reproducir en la rockola. Prueba con otra versión.", "err");
+    return say("Ese video no se puede reproducir en Radio Vida. Prueba con otra versión.", "err");
   }
   const por = $("nick").value.trim().slice(0, 30);
   try { localStorage.setItem("rockola_nick", por); } catch {}
